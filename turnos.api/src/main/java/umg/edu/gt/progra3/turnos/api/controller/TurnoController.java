@@ -45,6 +45,20 @@ public class TurnoController {
         }
     }
 
+    @GetMapping("/siguiente/ver")
+    public ResponseEntity<Turno> verSiguienteTurno() {
+        try {
+            Turno siguiente = gestor.verSiguienteTurno();
+            if (siguiente != null) {
+                return ResponseEntity.ok(siguiente);
+            } else {
+                return ResponseEntity.noContent().build();
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<String> cancelarTurno(@PathVariable Long id) {
         try {
