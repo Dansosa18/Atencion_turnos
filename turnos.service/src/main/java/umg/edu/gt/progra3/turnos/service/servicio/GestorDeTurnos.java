@@ -1,8 +1,14 @@
 package umg.edu.gt.progra3.turnos.service.servicio;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import umg.edu.gt.progra3.turnos.repository.model.Cliente;
 import umg.edu.gt.progra3.turnos.repository.model.Historial;
+import umg.edu.gt.progra3.turnos.repository.model.Servicio;
 import umg.edu.gt.progra3.turnos.repository.model.Turno;
+import umg.edu.gt.progra3.turnos.repository.repositorys.ClienteRepository;
+import umg.edu.gt.progra3.turnos.repository.repositorys.ServicioRepository;
+import umg.edu.gt.progra3.turnos.repository.repositorys.TurnoRepository;
 import umg.edu.gt.progra3.turnos.service.estructuras.ColaDeTurnos;
 import umg.edu.gt.progra3.turnos.service.estructuras.ListaHistorial;
 import umg.edu.gt.progra3.turnos.service.estructuras.PilaDeAcciones;
@@ -17,10 +23,37 @@ public class GestorDeTurnos {
     private ListaHistorial historial = new ListaHistorial();
     private PilaDeAcciones pilaDeAcciones = new PilaDeAcciones();
 
+    @Autowired
+    private TurnoRepository turnoRepository;
+
+    @Autowired
+    private ClienteRepository clienteRepository;
+
+    @Autowired
+    ServicioRepository servicioRepository;
+
+    @Autowired
+    private LogService logService;
+
     public void solicitarTurno(Turno turno) {
-        colaDeTurnos.agregarTurno(turno);
-        pilaDeAcciones.registrarAccion("Solicitado turno: " + turno.getId());
+
+        Cliente cliente = clienteRepository.save(turno.getCliente());
+        turno.setCliente(cliente);
+
+
+        Servicio servicio = servicioRepository.save(turno.getServicio());
+        turno.setServicio(servicio);
+
+        turno.setEstado("pendiente");
+        turno.setFechaCreacion(LocalDateTime.now());
+
+        Turno turnoGuardado = turnoRepository.save(turno);
+
+        colaDeTurnos.encolar(turnoGuardado);
+        pilaDeAcciones.apilar(() -> cancelarTurno(turnoGuardado.getId()));
+        logService.registrarLog("Solicitado turno", turnoGuardado, "Solicitado turno con ID: " + turnoGuardado.getId());
     }
+
 
     public Turno atenderTurno() {
         Turno turno = colaDeTurnos.atenderSiguiente();
@@ -47,6 +80,7 @@ public class GestorDeTurnos {
         } else {
             System.out.println("\n⚠️ No hay turnos pendientes para atender\n");
         }
+        logService.registrarLog("Atendido turno", turno, "Atendido turno con ID: " + turno.getId());
         return turno;
     }
 
@@ -88,6 +122,7 @@ public class GestorDeTurnos {
         System.out.println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
 
         colaDeTurnos.setCola(colaTemporal);
+        logService.registrarLog("Cancelado turno", turnoCancelado, "Cancelado turno con ID: " + id);
         return eliminado;
     }
 
@@ -126,5 +161,8 @@ public class GestorDeTurnos {
 
         return siguiente;
     }
+
+
+
 
 }
